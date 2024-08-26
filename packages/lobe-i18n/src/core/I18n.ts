@@ -82,9 +82,9 @@ export class I18n {
       to,
     });
     console.info(
-      '\n',
-      `INFO: translate markdown from ${from}: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n`,
-      md, '\n',
+      '\n' +
+      `INFO: translate markdown from ${from}: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n` +
+      md.substring(0, 100), '\n...\n' +
       "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
     );
     const splitString = await this.translateMarkdownService.genSplitMarkdown(
@@ -127,9 +127,9 @@ export class I18n {
         });
         if (this.step < this.maxStep) this.step++;
         console.info(
-          '\n',
-          `--> translated to ${to}++++++++++++++++++++++++++++++++++++++++++++++\n`,
-          result, '\n',
+          '\n' +
+          `--> translated to ${to}++++++++++++++++++++++++++++++++++++++++++++++\n` +
+          result.substring(0, 100), '\n...\n' +
           '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
         );
         return result;
