@@ -39,10 +39,14 @@ const splitJSONtoSmallChunks = (object: LocaleObj, splitToken: number) =>
 
 export const getSplitToken = (config: I18nConfig, prompt: string) => {
   let splitToken = (ModelTokens[config.modelName || defaultModel] - calcToken(prompt)) / 3;
+  if (!splitToken) {
+    splitToken = 128 * 1000;
+  }
   if (config.splitToken && config.splitToken < splitToken) {
     splitToken = config.splitToken;
   }
   splitToken = Math.floor(splitToken);
+  console.info("INFO: splitToken =", splitToken);
   return splitToken;
 };
 

@@ -5,15 +5,44 @@ import { alert } from '@lobehub/cli-ui';
 import { promptJsonTranslate, promptStringTranslate } from '@/prompts/translate';
 import { LocaleObj } from '@/types';
 import { I18nConfig } from '@/types/config';
+import { BaseMessage, MessageType } from '@langchain/core/messages';
+
+const lcMsgs_2_oaiMsgs = (msgs: BaseMessage[]) => {
+  const typeToRole = (type: MessageType) => {
+    switch(type) {
+      case "human":
+        return "user";
+      case "system":
+      case "function":
+      case "tool":
+        return type;
+      case "ai":
+      case "generic":
+      case "remove":
+      default:
+        return 'assistant';
+    }
+  }
+
+  return msgs.map(m => ({
+    role: typeToRole(m._getType()),
+    content: m.content
+  }));
+}
 
 export class TranslateLocale {
   private model: ChatOpenAI;
   private config: I18nConfig;
+  private openAIProxyUrl?: string;
+  private openAIApiKey: string;
   private isJsonMode: boolean;
   promptJson: ChatPromptTemplate<{ from: string; json: string; to: string }>;
   promptString: ChatPromptTemplate<{ from: string; text: string; to: string }>;
   constructor(config: I18nConfig, openAIApiKey: string, openAIProxyUrl?: string) {
     this.config = config;
+    this.openAIProxyUrl = openAIProxyUrl;
+    this.openAIApiKey = openAIApiKey;
+    console.info("INFO: i18n config =", this.config);
     this.model = new ChatOpenAI({
       configuration: {
         baseURL: openAIProxyUrl,
@@ -46,9 +75,28 @@ export class TranslateLocale {
         to,
       });
 
-      const res = await this.model.call(formattedChatPrompt);
+      let result = '';
 
-      const result = res['text'];
+      const messages = lcMsgs_2_oaiMsgs(formattedChatPrompt);
+      // console.info("DEBUG: oai messages =", JSON.stringify(messages, null, 2));
+      const res = await fetch(`${this.openAIProxyUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          model: this.config.modelName,
+          stream: false,
+          temperature: 0
+        })
+      });
+      const resData = await res.json();
+      const resContent = resData.choices[0].message.content;
+      // console.info("DEBUG: resContent =", resContent);
+
+      result = resContent;
 
       if (!result) this.handleError();
       return result;
@@ -72,6 +120,7 @@ export class TranslateLocale {
         to,
       });
 
+      // console.info("DEBUG: runByJson formattedChatPrompt =", JSON.stringify(formattedChatPrompt, null, 2));
       const res = await this.model.invoke(
         formattedChatPrompt,
         this.isJsonMode
@@ -80,6 +129,7 @@ export class TranslateLocale {
             }
           : undefined,
       );
+      // console.info("DEBUG: res =", JSON.stringify(res, null, 2));
 
       const result = this.isJsonMode ? res['content'] : res['text'];
 
@@ -95,5 +145,6 @@ export class TranslateLocale {
 
   private handleError(error?: any) {
     alert.error(`Translate failed, ${error || 'please check your network or try again...'}`, true);
+    console.error("ERROR:", error);
   }
 }

@@ -81,6 +81,12 @@ export class I18n {
       text: '',
       to,
     });
+    console.info(
+      '\n',
+      `INFO: translate markdown from ${from}: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n`,
+      md, '\n',
+      "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
+    );
     const splitString = await this.translateMarkdownService.genSplitMarkdown(
       md,
       JSON.stringify(prompt),
@@ -103,6 +109,7 @@ export class I18n {
       step: 0,
     });
 
+    console.info(`INFO: splitted into ${splitString.length} chunks based on splitToken\n`);
     const translatedSplitString: string[] = await pMap(
       splitString,
       async (text) => {
@@ -119,6 +126,12 @@ export class I18n {
           to,
         });
         if (this.step < this.maxStep) this.step++;
+        console.info(
+          '\n',
+          `--> translated to ${to}++++++++++++++++++++++++++++++++++++++++++++++\n`,
+          result, '\n',
+          '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
+        );
         return result;
       },
       { concurrency: this.config?.concurrency },
