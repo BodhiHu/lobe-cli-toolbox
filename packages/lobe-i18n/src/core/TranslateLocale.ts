@@ -63,10 +63,12 @@ export class TranslateLocale {
     from,
     to,
     text,
+    leftRetries = undefined
   }: {
     from?: string;
     text: string;
     to: string;
+    leftRetries?: number;
   }): Promise<string | any> {
     try {
       const formattedChatPrompt = await this.promptString.formatMessages({
@@ -93,14 +95,37 @@ export class TranslateLocale {
         })
       });
       const resData = await res.json();
-      const resContent = resData.choices[0].message.content;
-      // console.info("DEBUG: resContent =", resContent);
 
-      result = resContent;
+      result = resData?.choices?.[0]?.message?.content;
 
-      if (!result) this.handleError();
+      if (!result) {
+        console.info("ERROR: invalid reponse, resData =", resData);
+        throw new Error("invalid reponse");
+      }
+
       return result;
     } catch (error) {
+
+      if (leftRetries === undefined) {
+        leftRetries = 5;
+      }
+
+      if (leftRetries > 0) {
+        const retryDelays = 90;
+        console.info(`INFO: will retry in ${retryDelays} seconds...`);
+        console.info('INFO: tick =', new Date().toUTCString());
+        await new Promise((resolve, _reject) => {
+          setTimeout(() => {
+            resolve(0);
+          }, retryDelays*1000);
+        });
+        console.info(`INFO: ${retryDelays} seconds reached, tick =`, new Date().toUTCString());
+        return this.runByString({
+          from, to, text,
+          leftRetries: leftRetries - 1
+        });
+      }
+
       this.handleError(error);
     }
   }
