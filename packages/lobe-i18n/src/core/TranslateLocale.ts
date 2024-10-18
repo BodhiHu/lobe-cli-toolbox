@@ -138,6 +138,7 @@ export class TranslateLocale {
         });
       }
 
+      console.error(`ERROR: reached max retries, abort.`);
       this.handleError(error);
     }
   }
