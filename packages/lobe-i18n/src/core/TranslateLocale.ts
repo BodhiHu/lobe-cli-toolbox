@@ -70,6 +70,9 @@ export class TranslateLocale {
     to: string;
     leftRetries?: number;
   }): Promise<string | any> {
+
+    let resText = '', resData = null;
+
     try {
       const formattedChatPrompt = await this.promptString.formatMessages({
         from: from || this.config.entryLocale,
@@ -81,6 +84,7 @@ export class TranslateLocale {
 
       const messages = lcMsgs_2_oaiMsgs(formattedChatPrompt);
       // console.info("DEBUG: oai messages =", JSON.stringify(messages, null, 2));
+      const startTime = new Date().getTime();
       const res = await fetch(`${this.openAIProxyUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -91,10 +95,12 @@ export class TranslateLocale {
           messages,
           model: this.config.modelName,
           stream: false,
-          temperature: 0
+          temperature: 0,
+          max_tokens: this.config.splitToken,
         })
       });
-      const resData = await res.json();
+      resText = await res.text();
+      resData = JSON.parse(resText);
 
       result = resData?.choices?.[0]?.message?.content;
 
@@ -103,8 +109,14 @@ export class TranslateLocale {
         throw new Error("invalid reponse");
       }
 
+      console.info(`INFO: took ${(new Date().getTime() - startTime) / 1000} seconds`);
+
       return result;
     } catch (error) {
+
+      console.error("ERROR: error caught ----------------------------------:", error);
+      console.error("  => full response text =\n", resText);
+      console.error("-------------------------------------------------------");
 
       if (leftRetries === undefined) {
         leftRetries = 5;
