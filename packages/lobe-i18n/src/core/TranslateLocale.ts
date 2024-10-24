@@ -110,22 +110,26 @@ export class TranslateLocale {
         throw new Error("invalid reponse");
       }
 
-      console.info(`INFO: took ${(new Date().getTime() - startTime) / 1000} seconds`);
+      console.info(`INFO: status = ${res.status}, took ${(new Date().getTime() - startTime) / 1000} seconds`);
 
       return result;
     } catch (error) {
 
-      console.error("ERROR: error caught ----------------------------------:", error);
-      console.error("  => full response text =\n", resText);
+      console.error("\nERROR: caught error -----------------------------------");
+      console.error("=> status code =", res?.status);
+      console.error("=> error =\n", error);
+      console.error("=> full response text =\n", resText);
       console.error("-------------------------------------------------------");
 
       let retryDelays = 90;
+
       if (leftRetries === undefined) {
         leftRetries = 5;
-        if (res?.status == 504) { // 504 Gateway Time-out
-          retryDelays = 5;
-          leftRetries = 10;
-        }
+      }
+
+      const isServerException = (res?.status || 0) >= 400 || resText.trim().startsWith("<html>");
+      if (isServerException) {
+        retryDelays = 5;
       }
 
       if (leftRetries > 0) {
