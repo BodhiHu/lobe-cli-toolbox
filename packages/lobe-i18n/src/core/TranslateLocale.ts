@@ -72,6 +72,7 @@ export class TranslateLocale {
   }): Promise<string | any> {
 
     let resText = '', resData = null;
+    let res = null;
 
     try {
       const formattedChatPrompt = await this.promptString.formatMessages({
@@ -85,7 +86,7 @@ export class TranslateLocale {
       const messages = lcMsgs_2_oaiMsgs(formattedChatPrompt);
       // console.info("DEBUG: oai messages =", JSON.stringify(messages, null, 2));
       const startTime = new Date().getTime();
-      const res = await fetch(`${this.openAIProxyUrl}/chat/completions`, {
+      res = await fetch(`${this.openAIProxyUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.openAIApiKey}`,
@@ -118,12 +119,16 @@ export class TranslateLocale {
       console.error("  => full response text =\n", resText);
       console.error("-------------------------------------------------------");
 
+      let retryDelays = 90;
       if (leftRetries === undefined) {
         leftRetries = 5;
+        if (res?.status == 504) { // 504 Gateway Time-out
+          retryDelays = 5;
+          leftRetries = 10;
+        }
       }
 
       if (leftRetries > 0) {
-        const retryDelays = 90;
         console.info(`INFO: will retry in ${retryDelays} seconds...`);
         console.info('INFO: tick =', new Date().toUTCString());
         await new Promise((resolve, _reject) => {
